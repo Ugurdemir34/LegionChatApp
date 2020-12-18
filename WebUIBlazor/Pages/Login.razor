@@ -1,0 +1,72 @@
+﻿@layout AccountLayout
+@page "/login"
+@using Models
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager navigationManager
+@inject IAuthenticationService authenticationService
+
+
+
+
+<div class="col-md-6 offset-md-3 mt-5">    
+    <div class="card">
+        <h4 class="card-header">LEGION</h4>
+        <div class="card-body">
+            <EditForm Model="@loginModel" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <InputText PlaceHolder="E-Posta Adresi" Class="form-control" @bind-Value="@loginModel.Email" />
+                    <ValidationMessage For="@(() => loginModel.Email)" />
+                </div>
+                <div class="form-group">
+                    <InputText PlaceHolder="Şifre" Class="form-control" @bind-Value="@loginModel.Password" />
+                    <ValidationMessage For="@(() => loginModel.Email)" />
+                </div>
+                <button class="btn btn-success" type="submit">
+                    @if (loading)
+                    {
+                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                    }
+                    Log In
+                </button>
+               
+                @if (!string.IsNullOrEmpty(error))
+                {
+                    <div class="alert alert-danger mt-3 mb-0">@error</div>
+                }
+            </EditForm><br />
+            <a role="button" href="register" class="btn btn-outline-success">Create an Account</a>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    LoginModel loginModel = new LoginModel();
+    private bool loading;
+    private string error;
+    protected override void OnInitialized()
+    {
+        if (authenticationService.User != null)
+        {
+            navigationManager.NavigateTo("");
+        }
+    }
+    private async void HandleValidSubmit()
+    {
+        loading = true;
+        try
+        {
+            await authenticationService.Login(loginModel);
+            var returnUrl = navigationManager.QueryString("returnUrl") ?? "";
+            navigationManager.NavigateTo(returnUrl);
+        }
+        catch (Exception ex)
+        {
+            error = "Kullanıcı Adı veya Parola Hatalı";
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}
+

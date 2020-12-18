@@ -1,0 +1,19 @@
+﻿@inherits LayoutComponentBase
+@inject IAuthenticationService authenticationService
+@if (authenticationService.User != null)
+{
+    
+    <div class="sidebar">
+
+        <NavMenu />
+    </div>
+}
+<div class="main">
+    <div class="top-row px-4" style="z-index:1;">
+        <a class="ml-md-auto">@authenticationService.User.UserName Hoşgeldin!</a>
+        <a href="http://blazor.net" target="_blank" class="ml-md-auto">About</a>
+    </div>
+    <div class="content px-4">
+        @Body
+    </div>
+</div>

@@ -1,0 +1,86 @@
+﻿@using Entities.Concrete
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IRequestService requestService
+@inject IAuthenticationService authService
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">WebUIBlazor</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="community">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Community
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="hobbylist">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Hobby List
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="requestlist">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Requests&nbsp;<span class="badge badge-primary">@RequestCount</span>
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink href="conversation" class="nav-item nav-link">
+                <span class="oi oi-text" aria-hidden="true"></span> Conversations
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink href="logout" class="nav-item nav-link">
+                <span class="oi oi-fullscreen-exit" aria-hidden="true"></span> Logout
+            </NavLink>
+        </li>
+    </ul>
+</div>
+
+@code {
+
+
+    private bool collapseNavMenu = true;
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private HubConnection hubConnection;
+
+    private int RequestCount = 0;
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        /* hubConnection = new HubConnectionBuilder().WithUrl("https://localhost:44399/broadcast").Build();
+         await hubConnection.StartAsync();
+         await hubConnection.InvokeAsync("SendRequestCount", authService.User.UserId,hubConnection.ConnectionId );
+
+         hubConnection.On<int>("transferrequestcount", (data) =>
+         {
+             RequestCount = data;
+             Console.WriteLine("Connection => {0} and User Id => {1} and Data ={2}",hubConnection.ConnectionId,authService.User.UserId,data);
+             StateHasChanged();
+         });
+         Console.WriteLine(hubConnection.State);*/
+        while (authService.User!=null)
+        {
+            if(authService.User !=null)
+            {
+                RequestCount = await requestService.GetRequestCount(authService.User.UserId);
+                StateHasChanged();
+            }
+
+      }
+    }
+    public void Dispose()
+    {
+        hubConnection.DisposeAsync();
+    }
+}

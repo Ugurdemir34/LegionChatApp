@@ -1,0 +1,97 @@
+﻿@page "/conversation"
+@using Entities.Dtos
+@using Entities.Concrete
+@using Microsoft.AspNetCore.SignalR.Client
+@using Dtos
+@attribute [Authorize]
+@inject IRequestService requestService
+@inject IAuthenticationService authService
+@inject IMessageService messageService
+@inject NavigationManager NavigationManager
+
+@if (UserFriendList == null)
+{
+    <span class="spinner-border spinner-border-sm mr-1"></span>
+}
+else
+{
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <h3>Friends</h3>
+                <div class="list list-row block">
+                    @for (int i = 0; i < UserFriendList.Friends.Count; i++)
+                    {
+                        var friend = UserFriendList.Friends[i];
+                        var base64 = Convert.ToBase64String(friend.Photo);
+                        var imgSrc = String.Format("data:image/gif;base64,{0}", base64);
+                        <div class="list-item" style="cursor:pointer" @onclick="@(()=> selectFriend(new SelectedFriendInfo() {FriendId=friend.Id,FriendNameLastname=friend.Name+" "+friend.LastName }))">
+                            <div><a><span class="w-48 avatar gd-primary"><img src="@imgSrc" style="border-radius:50%;margin:5px; width:50px;height:50px;vertical-align:middle" alt="..." class="img-fluid rounded-circle"></span></a></div>
+                            <div class="flex">
+                                <a class="item-author text-color">@friend.Name @friend.LastName</a>
+                                @if (Notifications == null)
+                                {
+                                    <div class="item-except text-muted text-sm h-1x">@UserFriendList.LastMessages[i]</div>
+                                }
+                                else
+                                {
+                                    @for (int j = 0; j < Notifications.Count;i++)
+                                    {
+                                        var notification = Notifications[i];
+                                        @if (notification.FriendId != selectedFriendId)
+                                        {
+                                            <div class="item-except text-muted text-sm h-1x"><b>@notification.MessageContent</b></div>break;
+                                        }
+
+                                    }
+                                }
+                            </div>
+                            <div class="no-wrap">
+                                <div class="item-date text-muted text-sm d-none d-md-block">21 July</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            @if (SelectedFriend.FriendId != 0)
+            {
+                if (showSpinner == true)
+                {
+                    <span class="spinner-border spinner-border-sm mr-1"></span>
+                }
+                else
+                {
+                    <MessageContainer SelectedFriend="SelectedFriend" messages="messages"></MessageContainer>
+                }
+
+            }
+        </div>
+    </div>
+}
+@code
+{
+    public RequestFriendListDto UserFriendList;
+    private int selectedFriendId;
+    public List<UserFriendMessageListDto> messages { get; set; }
+    public List<NotificationDto> Notifications { get; set; }
+    private bool showSpinner = false;
+    private SelectedFriendInfo SelectedFriend { get; set; } = new SelectedFriendInfo();
+    private HubConnection hubConnection;
+    protected override async Task OnInitializedAsync()
+    {
+        showSpinner = true;
+        int userid = authService.User.UserId;
+        UserFriendList = await requestService.GetFriendList(authService.User.UserId);      
+    }
+    public async void selectFriend(SelectedFriendInfo info)
+    {
+        Console.WriteLine(info.FriendNameLastname);
+        showSpinner = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        showSpinner = false;
+        SelectedFriend = info;
+        messages = await messageService.GetFriendMessageList(authService.User.UserId, info.FriendId);
+        StateHasChanged();
+    }
+}

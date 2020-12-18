@@ -1,0 +1,38 @@
+﻿@page "/hobbyList"
+@using Entities.Concrete
+@using Microsoft.AspNetCore.SignalR.Client
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject IHobbyService IHobbyService
+<h3>HobbyList</h3>
+@if (hobbies == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    @foreach (var hobby in hobbies)
+    {
+        <p>@hobby.Name</p>
+        <br />
+    }
+}
+@code
+ {
+    List<Hobby> hobbies;
+    private HubConnection hubConnection;
+    protected async override Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder().WithUrl("https://localhost:44399/broadcast").Build();
+        await hubConnection.StartAsync();
+        hubConnection.On<List<Hobby>>("TransferData", (data) =>
+        {
+            hobbies = data;
+            StateHasChanged();
+        });
+    }
+    public void Dispose()
+    {
+        hubConnection.DisposeAsync();
+    }
+}

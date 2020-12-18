@@ -1,0 +1,179 @@
+﻿@using Entities.Dtos
+@using Entities.Concrete
+@using Microsoft.AspNetCore.SignalR.Client
+@using Dtos
+@inject IRequestService requestService
+@inject IAuthenticationService authService
+@inject IMessageService messageService
+@inject NavigationManager NavigationManager
+@inject HubService HubService
+<div class="col-md-8 chat">
+    @if (isTexting)
+    {
+        <h3 class="text-center">@SelectedFriend.FriendNameLastname yazıyor..</h3>
+    }
+    else
+    {
+        <h3 class="text-center">@SelectedFriend.FriendNameLastname</h3>
+    }
+    <div class="card">
+        <div class="card-body msg_card_body">
+            @foreach (var message in messages)
+            {
+                var state = "msg_cotainer";
+                var content = "justify-content-start";
+                var time = "msg_time";
+                @if (message.UserId == authService.User.UserId)
+                {
+                    state = "msg_cotainer_send";
+                    content = "justify-content-end";
+                    time = "msg_time_send";
+                    <div class="d-flex @content mb-4">
+
+                        <div class="@state">
+                            @message.MessageContent
+                            <span class=" @time" style="color:black">@message.DeliveredDate.ToShortTimeString()</span>
+                            &nbsp;
+                            <a @onclick="@ModalShow"> <span class="oi oi-ban text-white" style="cursor:pointer" data-placement="left" data-toggle="tooltip" title="Mesajı Sil"></span></a>
+                        </div>
+                        <div class="img_cont_msg">
+                            <img src="https://static.turbosquid.com/Preview/001292/481/WV/_D.jpg" class="rounded-circle user_img_msg">
+                        </div>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex @content mb-4">
+                        <div class="img_cont_msg">
+                            <img src="https://static.turbosquid.com/Preview/001292/481/WV/_D.jpg" class="rounded-circle user_img_msg">
+                        </div>
+                        <div class="@state">
+                            @message.MessageContent
+                            <span class=" @time" style="color:black">@message.DeliveredDate.ToShortTimeString()</span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+        <div class="card-footer">
+            <div class="input-group">
+                <div class="input-group-append">
+                    <span class="iut-group-text attach_btn"><span class="oi oi-paperclip"></span></span>
+                </div>
+                <textarea name="" class="form-control type_msg" @bind="@message" @onkeydown="Texting" @bind:event="oninput" placeholder="Type your message..."></textarea>
+                <div class="input-group-append" @onclick="(()=>SendMessage())">
+                    <span class="input-group-text send_btn"><span class="oi oi-location"></span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal fade show" style="display:block" aria-modal="true" role="dialog" @onclick="@ModalCancel">
+        <div class="modal-dialog" @onclick:stopPropagation="true">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title">Confirm action</h4>
+                    <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body">
+                    <p>Do you want to delete this message ?</p>
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn" @onclick="@ModalCancel">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick=@ModalOk>Delete</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+<hr />
+@code {
+    bool showModal = false;
+
+
+    [Parameter]
+    public SelectedFriendInfo SelectedFriend { get; set; }
+    private HubConnection hubConnection;
+    [Parameter]
+    public List<UserFriendMessageListDto> messages { get; set; }
+    bool isTexting = false;
+    private string message { get; set; } = string.Empty;
+    private LastMessageDto newMessage = new LastMessageDto();
+    protected override async Task OnInitializedAsync()
+    {
+        int userid = authService.User.UserId;
+        hubConnection = new HubConnectionBuilder().WithUrl("https://localhost:44399/broadcast").Build();
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("Connect", userid, hubConnection.ConnectionId);
+        hubConnection.On<LastMessageDto>("messagetransfer", (data) =>
+        {
+            if (SelectedFriend.FriendId == data.MessageFrom)
+            {
+                messages.Add(new UserFriendMessageListDto()
+                {
+                    DeliveredDate = data.DeliveredDate,
+                    FriendId = data.MessageTo,
+                    MessageContent = data.MessageContent,
+                    UserId = data.MessageFrom
+                });
+                StateHasChanged();
+            }
+        });
+        hubConnection.On<int, int, int>("textingtransfer", (friendid, userIddata, messagedata) =>
+        {
+            if (messagedata > 0)
+            {
+                if (friendid == SelectedFriend.FriendId && userIddata == userid)
+                {
+
+                    isTexting = true;
+                }
+            }
+            else
+            {
+                isTexting = false;
+            }
+
+            StateHasChanged();
+        });
+    }
+    void ModalShow() => showModal = true;
+    void ModalCancel() => showModal = false;
+    void ModalOk()
+    {
+        Console.WriteLine("Modal ok");
+        showModal = false;
+    }
+    async void SendMessage()
+    {
+        newMessage.MessageFrom = authService.User.UserId;
+        newMessage.MessageTo = SelectedFriend.FriendId;
+        newMessage.DeliveredDate = DateTime.Now;
+        newMessage.connectionId = hubConnection.ConnectionId;
+        newMessage.MessageContent = message;
+        message = "";
+        messages.Add(new UserFriendMessageListDto { FriendId = newMessage.MessageTo, DeliveredDate = DateTime.Now, UserId = newMessage.MessageFrom, MessageContent = newMessage.MessageContent });
+        await hubConnection.InvokeAsync("SendMessage", newMessage);
+    }
+    async void Texting()
+    {
+
+        await hubConnection.InvokeAsync("Texting", authService.User.UserId, SelectedFriend.FriendId, message.Length - 1);
+    }
+    public void Dispose()
+    {
+        hubConnection.DisposeAsync();
+    }
+
+}

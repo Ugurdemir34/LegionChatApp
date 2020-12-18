@@ -1,0 +1,246 @@
+﻿@layout AccountLayout
+@page "/register"
+@using Entities.Dtos
+@using Entities.Concrete
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IUserService UserService
+@inject IHobbyService HobbyService
+@inject ILanguageService LanguageService
+<h3>Register</h3>
+<div class="col-md-6 offset-md-3 mt-5">
+    <div class="card">
+        <h4 class="card-header">Create an Account</h4>
+        <div class="card-body">
+            <EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label>Username</label>
+                    <InputText @bind-Value="model.UserName" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.UserName)" />
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <InputText @bind-Value="model.Password" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.Password)" />
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <InputText @bind-Value="model.FirstName" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.FirstName)" />
+                </div>
+                <div class="form-group">
+                    <label>Surname</label>
+                    <InputText @bind-Value="model.LastName" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.LastName)" />
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <InputText @bind-Value="model.PhoneNumber" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.PhoneNumber)" />
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <InputText @bind-Value="model.Email" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.Email)" />
+                </div>
+                <div class="form-group">
+                    <label>About</label>
+                    <InputTextArea @bind-Value="model.About" class="form-control"></InputTextArea>
+                    <ValidationMessage For="@(() => model.About)" />
+                </div>
+                <div class="form-group">
+                    <label>Native Language</label>
+                    <InputText @bind-Value="model.NativeLanguage" class="form-control"></InputText>
+                    <ValidationMessage For="@(() => model.NativeLanguage)" />
+                </div>
+                <div class="form-group">
+                    <label>Birthday</label>
+                    <RadzenDatePicker @bind-Value="model.Birthday" Change="@(args=>Change(args,"DatePicker","MM/dd/yyyy"))" />
+                    <ValidationMessage For="@(() => model.NativeLanguage)" />
+                </div>
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Country</label>
+                            <InputText @bind-Value="model.Country" class="form-control"></InputText>
+                            <ValidationMessage For="@(() => model.Country)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label>City</label>
+                            <InputText @bind-Value="model.City" class="form-control"></InputText>
+                            <ValidationMessage For="@(() => model.City)" />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label>Sex</label>
+                    <select @bind="model.Sex" class="form-control">
+                        <option value="1">Female</option>
+                        <option value="2">Male</option>
+                    </select>
+                    <ValidationMessage For="@(() => model.Sex)" />
+                </div>
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Languages(Multiple)</label>
+                            <input class="form-control" @bind-value="searchLanguage" @bind-value:event="oninput" /><br />
+                            <div style="height:250px;overflow:scroll;">
+                                <ul class="list-group" style="cursor:pointer">
+                                    @foreach (var language in filteredLanguages)
+                                    {
+                                        <li @onclick="@(()=>SelectLanguage(language))" class="list-group-item">@language.LanguageName</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Selected Languages</label>
+                            <div style="height:250px;overflow:scroll;">
+                                <ul class="list-group" style="cursor:pointer">
+                                    @foreach (var selectedlanguage in selectedLanguages)
+                                    {
+                                        <li style="background-color:greenyellow" @onclick="@(()=>DeleteLanguage(selectedlanguage))" class="list-group-item mt-3">@selectedlanguage.LanguageName</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Hobbies(Multiple)</label>
+                            <input class="form-control" @bind-value="searchHobby" @bind-value:event="oninput" /><br />
+                            <div style="height:250px;overflow:scroll;">
+                                <ul class="list-group" style="cursor:pointer">
+                                    @foreach (var hobby in filteredHobbies)
+                                    {
+                                        <li @onclick="@(()=>SelectHobby(hobby))" class="list-group-item">@hobby.Name</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Selected Hobbies</label>
+                            <div style="height:250px;overflow:scroll;">
+                                <ul class="list-group" style="cursor:pointer">
+                                    @foreach (var selectedHobby in selectedHobbies)
+                                    {
+                                        <li style="background-color:greenyellow" @onclick="@(()=>DeleteHobby(selectedHobby))" class="list-group-item mt-3">@selectedHobby.Name</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <InputFile OnChange="HandleFileSelected" accept="image/*" />
+                @*@if (file != null)
+                    {
+                        <p>Name: @file.Name</p>
+                        <p>Size in bytes: @file.Size</p>
+                        <p>Last modified date: @file.LastModified.ToShortDateString()</p>
+                        <p>Content type (not always supplied by the browser): @file.Type</p>
+                    }*@
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger mt-3 mb-0">@error</div>
+            }
+
+        </div>
+    </div>
+
+</div>
+@code
+ {
+    UserForRegisterDto model = new UserForRegisterDto();
+    DateTime? value = DateTime.Now;
+    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    byte[] _fileBytes = null;
+    List<Language> languages = new List<Language>();
+    List<Language> filteredLanguages => languages.Where(i => i.LanguageName.ToLower().Contains(searchLanguage.ToLower())).ToList();
+    HashSet<Language> selectedLanguages = new HashSet<Language>();
+    List<Hobby> hobbies = new List<Hobby>();
+    List<Hobby> filteredHobbies => hobbies.Where(i => i.Name.ToLower().Contains(searchHobby.ToLower())).ToList();
+    HashSet<Hobby> selectedHobbies = new HashSet<Hobby>();
+    string error = "";
+    string searchLanguage = "";
+    string searchHobby = "";
+    private HubConnection hubConnection;
+    protected override async Task OnInitializedAsync()
+    {       
+        languages = await LanguageService.GetLanguages();
+        hobbies = await HobbyService.GetHobbies();
+    }
+    public async Task HandleFileSelected(IFileListEntry[] files)
+    {
+        IFileListEntry file = files.FirstOrDefault();
+        using (var ms = new System.IO.MemoryStream())
+        {
+            await file.Data.CopyToAsync(ms);
+            _fileBytes = ms.ToArray();
+            model.Photo = GetImage(Convert.ToBase64String(_fileBytes));
+        }
+    }
+    void Change(DateTime? value, string name, string format)
+    {
+        events.Add(DateTime.Now, $"{name} value changed to {value?.ToString(format)}");
+        StateHasChanged();
+    }
+    private void HandleValidSubmit()
+    {
+        try
+        {
+            
+            //model.Languages = selectedLanguages.ToList();
+            List<Language> temp = selectedLanguages.ToList();
+            List<Hobby> hobbytemp = selectedHobbies.ToList();
+            for (int i = 0; i < temp.Count; i++)
+            {
+                model.Languages.Add(temp[i]);
+
+            }
+            for (int i = 0; i < hobbytemp.Count; i++)
+            {
+                model.Hobbies.Add(hobbytemp[i]);
+            }
+            UserService.Add(model);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }    
+    public byte[] GetImage(string sBase64String)
+    {
+        byte[] bytes = null;
+        if (!string.IsNullOrEmpty(sBase64String))
+        {
+            bytes = Convert.FromBase64String(sBase64String);
+        }
+        return bytes;
+    }
+    private void SelectLanguage(Language language)
+    {
+        selectedLanguages.Add(language);
+    }
+    private void DeleteLanguage(Language selectedlanguage)
+    {
+        selectedLanguages.Remove(selectedlanguage);
+
+    }
+    private void SelectHobby(Hobby hobby)
+    {
+        selectedHobbies.Add(hobby);
+    }
+    private void DeleteHobby(Hobby selectedhobby)
+    {
+        selectedHobbies.Remove(selectedhobby);
+
+    }
+}

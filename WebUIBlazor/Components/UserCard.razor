@@ -1,0 +1,97 @@
+﻿@using Entities.Dtos
+@inject IUserService userService
+@inject ILocalStorageService localStorageService
+@inject NavigationManager navigationManager
+@using Models
+<h3>Community</h3>
+
+@if (users == null)
+{
+    <span class="spinner-border spinner-border-sm mr-1"></span>
+}
+else
+{
+    <div class="row">
+
+        @foreach (var user in users)
+        {
+
+            <div class="col-md-6" style="min-width:450px">
+                <div class="profilecard" style="cursor:pointer" @onclick="@(() => GoToDetail(user.Id))">
+                    <div class="additional">
+                        <div class="user-card">
+                            <div class="level profile-center">
+                                Age : @user.Age
+                            </div>
+                            @if (user.isFriend)
+                            {
+                                <div class="points profile-center">
+                                    <p>Already Friend</p>
+                                </div>
+                            }
+                            @{
+                                var base64 = Convert.ToBase64String(user.Photo);
+                                var imgSrc = String.Format("data:image/gif;base64,{0}", base64);
+                            }
+                            <img src="@imgSrc" style="border-radius:50%;width:110px;height:110px" class="profile-center" alt="http://via.placeholder.com/110x110" />
+                        </div>
+                        <div class="more-info">
+                            <h3 style="margin-top:15px;color:#fff;">@user.Name @user.LastName</h3>
+                            <div class="coords">
+                                <h4 style="text-align:center;">@user.UserName</h4>
+                                <span></span>
+                                <span>Joined @user.ProfileCreatedDate.ToShortDateString()</span>
+                            </div>
+                            <div class="coords">
+                                <span></span>
+                                <span><i class="oi oi-location" aria-hidden="true"></i> @user.City, @user.Country</span>
+                            </div>
+                            <div class="stats">
+                                @*<div>
+                                        <div class="title">Awards</div>
+                                        <i class="fa fa-trophy"></i>
+                                        <div class="value">2</div>
+                                    </div>
+                                    <div>
+                                        <div class="title">Matches</div>
+                                        <i class="fa fa-gamepad"></i>
+                                        <div class="value">27</div>
+                                    </div>
+                                    <div>
+                                        <div class="title">Pals</div>
+                                        <i class="fa fa-group"></i>
+                                        <div class="value">123</div>
+                                    </div>
+                                    <div>
+                                        <div class="title">Coffee</div>
+                                        <i class="fa fa-coffee"></i>
+                                        <div class="value infinity">∞</div>
+                                    </div>*@
+                            </div>
+                        </div>
+                    </div>
+                    <div class="general">
+                        <h3 style="margin-top:15px">@user.Name @user.LastName</h3>
+                        <p>@user.About</p>
+                        <span class="more">Mouse over the card for more info</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+@code
+{
+    List<UserHobbyDto> users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userInfo = await localStorageService.GetItem<TokenModel>("tokenModel");
+
+        users = await userService.GetCommunity(userInfo.UserId);
+    }
+    void GoToDetail(int userId)
+    {
+        navigationManager.NavigateTo("/communitydetail/" + userId);
+    }
+}

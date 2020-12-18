@@ -1,0 +1,113 @@
+﻿@page "/communitydetail/{id:int}"
+@using Entities.Dtos
+@using Entities.Concrete
+@using WebUIBlazor.Services.Abstract
+@attribute [Authorize]
+@inject IUserService userService
+@inject IAuthenticationService authService
+@inject IRequestService requestService
+@if (user == null)
+{
+    <span class="spinner-border spinner-border-sm mr-1"></span>
+}
+else
+{
+    <div class="container">
+        <div class="row">
+            <div class=" col-12 main-section text-center">
+                <div class="row">
+                    <div class="- col-12 profile-header"></div>
+                </div>
+                <div class="row user-detail">
+                    <div class="col-12">
+                        @{
+                            var base64 = Convert.ToBase64String(user.Photo);
+                            var imgSrc = String.Format("data:image/gif;base64,{0}", base64);
+                        }
+                        <!-- <img src="@imgSrc" style="border-radius:50%;width:110px;height:110px" class="profile-center" alt="http://via.placeholder.com/110x110" />-->
+                        <img src="@imgSrc" class="rounded-circle img-thumbnail">
+                        <h5>@user.Name&nbsp;@user.LastName</h5>
+                        <p><i class="oi oi-location" aria-hidden="true"></i> @user.City, @user.Country</p><br />
+                        <p>Languages</p>
+                        <div class="col-12">
+                            @foreach (var language in user.Languages)
+                            {
+                                <button class="btn btn-outline-primary" disabled>@language.LanguageName</button>
+                            }
+                        </div>
+                        <hr>
+
+                        @if (didSendRequest == 2)
+                        {
+                            <a @onclick="SendRequest" class="btn btn-info btn-sm">Send Request</a>
+                        }
+                        else if (didSendRequest == 1)
+                        {
+                            <a @onclick="AcceptRequest" class="btn btn-info btn-sm">Accept / Ignore</a>
+                        }
+                        else if (didSendRequest == 3)
+                        {
+                            <p>Already Friend</p>
+                        }
+                        else
+                        {
+                            <p>İstek Gönderildi</p>
+                        }
+
+                        <hr>
+                        <span>@user.About</span>
+                    </div>
+                </div>
+                <div class="row user-social-detail">
+                    <p>Interests</p>
+                    <div class="col-12">
+                        @foreach (var hobby in user.Hobbies)
+                        {
+                            <button class="btn btn-outline-primary" style="color:#fff;border-color:#fff" disabled>@hobby.Name</button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    [Parameter]
+    public int id { get; set; }
+    UserForCommunityDetailDto user;
+    Request request;
+    private int didSendRequest;
+    RequestStateDto requestStateDto;
+    protected override async Task OnInitializedAsync()
+    {
+        user = await userService.GetCommunityDetail(authService.User.UserId, id);
+        requestStateDto = await requestService.GetRequestState(authService.User.UserId, id);
+        didSendRequest = (int)requestStateDto.RequestStates;
+    }
+    public void SendRequest()
+    {
+        didSendRequest = 0;
+        request = new Request
+        {
+            Accepted = false,
+            RequestFrom = authService.User.UserId,
+            RequestTo = id
+        };
+        requestService.Add(request);
+    }
+    public void AcceptRequest()
+    {
+        didSendRequest = 3;
+        Console.WriteLine("Update triggered");
+        var model = new RequestUpdateDto()
+        {
+            Id = requestStateDto.Request.Id,
+            RequestFrom = requestStateDto.Request.RequestFrom,
+            RequestTo = requestStateDto.Request.RequestTo,
+            Accepted = true
+        };
+        requestService.Update(model);
+
+
+    }
+}
