@@ -11,7 +11,7 @@ namespace DataAccess.Concrete.EntityFramework.Contexts
     {
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(@"Server=****;Database=Legion;Trusted_Connection=true");
+            optionsBuilder.UseSqlServer(@"Server=servername;Database=Legion;Trusted_Connection=true");
         }
         public DbSet<Hobby> Hobbies { get; set; }
         public DbSet<Request> Requests { get; set; }
